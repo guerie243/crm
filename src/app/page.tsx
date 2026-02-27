@@ -1,65 +1,134 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from 'react';
+import { Users, AlertCircle, TrendingUp, BarChart3 } from 'lucide-react';
+import { StatCard } from '@/components/dashboard/StatCard';
+import { FunnelChart } from '@/components/dashboard/FunnelChart';
+import { Prospect, ProspectStats } from '@/types/prospect';
+import { getRecommendation, RecommendationStatus, STEPS } from '@/lib/logic';
+
+// Mock data generator for initial state or error state
+const getInitialStats = (): ProspectStats => ({
+  total: 0,
+  byStep: STEPS.reduce((acc, step) => ({ ...acc, [step]: 0 }), {} as any),
+  alerts: 0,
+  avgScore: 0
+});
+
+export default function DashboardPage() {
+  const [stats, setStats] = useState<ProspectStats>(getInitialStats());
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const response = await fetch('/api/prospects');
+        const data: Prospect[] = await response.json();
+
+        if (!Array.isArray(data)) {
+          setLoading(false);
+          return;
+        }
+
+        const newStats = data.reduce((acc, p) => {
+          acc.total++;
+          acc.byStep[p.etape] = (acc.byStep[p.etape] || 0) + 1;
+          acc.avgScore += p.score;
+
+          const rec = getRecommendation(p);
+          if (rec.status === 'ALERT') acc.alerts++;
+
+          return acc;
+        }, getInitialStats());
+
+        if (newStats.total > 0) {
+          newStats.avgScore = Math.round(newStats.avgScore / newStats.total);
+        }
+
+        setStats(newStats);
+      } catch (error) {
+        console.error("Failed to fetch stats", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStats();
+  }, []);
+
+  const chartData = STEPS.map(step => ({
+    step,
+    count: stats.byStep[step] || 0
+  }));
+
+  if (loading) {
+    return <div className="flex h-96 items-center justify-center">Chargement...</div>;
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h1>
+        <p className="text-muted-foreground">Vue d'ensemble de votre tunnel de conversion.</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Prospects"
+          value={stats.total}
+          icon={Users}
+          description="Prospects enregistrés"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <StatCard
+          title="Alertes Actives"
+          value={stats.alerts}
+          icon={AlertCircle}
+          description="Prospects à relancer"
+        />
+        <StatCard
+          title="Score Moyen"
+          value={`${stats.avgScore}%`}
+          icon={TrendingUp}
+          description="Qualité globale du tunnel"
+        />
+        <StatCard
+          title="Étape Cruciale"
+          value={STEPS[0]}
+          icon={BarChart3}
+          description="Étape avec le plus d'activité"
+        />
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-7">
+        <div className="lg:col-span-4">
+          <FunnelChart data={chartData} />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="lg:col-span-3">
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm h-full">
+            <h3 className="mb-6 text-lg font-semibold text-primary">Progression Globale</h3>
+            <div className="space-y-6">
+              {STEPS.map((step) => {
+                const count = stats.byStep[step] || 0;
+                const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
+                return (
+                  <div key={step}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-muted-foreground">{step}</span>
+                      <span className="text-sm font-bold text-primary">{count}</span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all duration-500 ease-out"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
