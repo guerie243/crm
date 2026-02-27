@@ -59,39 +59,35 @@ export function ProspectTable({
                                 </td>
                                 <td className="px-4 py-4">
                                     <div className="flex items-center space-x-4">
-                                        <Tooltip label="Clic Link">
-                                            <input
-                                                type="checkbox"
-                                                checked={p.lien_clique}
-                                                onChange={(e) => onToggleBool(p.id, 'lien_clique', e.target.checked)}
-                                                className="h-4 w-4 rounded border-input"
-                                            />
-                                        </Tooltip>
-                                        <Tooltip label="Inscrit">
-                                            <input
-                                                type="checkbox"
-                                                checked={p.inscrit}
-                                                onChange={(e) => onToggleBool(p.id, 'inscrit', e.target.checked)}
-                                                className="h-4 w-4 rounded border-input"
-                                            />
-                                        </Tooltip>
-                                        <Tooltip label="Shop Conf">
-                                            <input
-                                                type="checkbox"
-                                                checked={p.boutique_configuree}
-                                                onChange={(e) => onToggleBool(p.id, 'boutique_configuree', e.target.checked)}
-                                                className="h-4 w-4 rounded border-input"
-                                            />
-                                        </Tooltip>
-                                        <div className="flex items-center space-x-1">
-                                            <span className="text-[10px] text-muted-foreground uppercase">Prod</span>
-                                            <input
-                                                type="number"
-                                                value={p.nombre_produits}
-                                                onChange={(e) => onUpdateNumber(p.id, 'nombre_produits', parseInt(e.target.value) || 0)}
-                                                className="w-12 bg-transparent text-xs border-none focus:ring-0 p-0 text-primary"
-                                            />
-                                        </div>
+                                        {(() => {
+                                            const actionDef = STEP_ACTION_MAPPING[p.etape];
+                                            if (!actionDef) return null;
+
+                                            if (actionDef.type === 'boolean') {
+                                                return (
+                                                    <Tooltip label={actionDef.label}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!p[actionDef.key]}
+                                                            onChange={(e) => onToggleBool(p.id, actionDef.key as keyof ProspectInsert, e.target.checked)}
+                                                            className="h-4 w-4 rounded border-input"
+                                                        />
+                                                    </Tooltip>
+                                                );
+                                            } else {
+                                                return (
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className="text-xs text-muted-foreground">{actionDef.label}:</span>
+                                                        <input
+                                                            type="number"
+                                                            value={(p[actionDef.key] as number) || 0}
+                                                            onChange={(e) => onUpdateNumber(p.id, actionDef.key as keyof ProspectInsert, parseInt(e.target.value) || 0)}
+                                                            className="w-16 bg-transparent border-b border-input focus:border-primary focus:ring-0 text-primary px-1 py-0.5"
+                                                        />
+                                                    </div>
+                                                );
+                                            }
+                                        })()}
                                     </div>
                                 </td>
                                 <td className="px-4 py-4 text-center">

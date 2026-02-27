@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Prospect, ProspectInsert, ProspectStep } from '@/types/prospect';
-import { STEPS } from '@/lib/logic';
+import { STEPS, STEP_ACTION_MAPPING } from '@/lib/logic';
 
 interface ProspectModalProps {
     isOpen: boolean;
@@ -115,58 +115,34 @@ export function ProspectModal({ isOpen, onClose, onSave, prospect }: ProspectMod
                                 {STEPS.map(step => <option key={step} value={step}>{step}</option>)}
                             </select>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-muted-foreground">Action Effectuée</label>
-                            <div className="flex h-10 items-center">
-                                <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-input"
-                                    checked={formData.action_effectuee}
-                                    onChange={(e) => setFormData({ ...formData, action_effectuee: e.target.checked })}
-                                />
-                            </div>
-                        </div>
-                    </div>
+                        {(() => {
+                            const actionDef = STEP_ACTION_MAPPING[formData.etape];
+                            if (!actionDef) return null;
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {['lien_clique', 'inscrit', 'boutique_configuree', 'lien_partage'].map((field) => (
-                            <div key={field} className="space-y-2">
-                                <label className="text-xs font-medium text-muted-foreground capitalize">
-                                    {field.replace('_', ' ')}
-                                </label>
-                                <div className="flex h-8 items-center">
-                                    <input
-                                        type="checkbox"
-                                        className="h-4 w-4 rounded border-input"
-                                        checked={(formData as any)[field]}
-                                        onChange={(e) => setFormData({ ...formData, [field]: e.target.checked })}
-                                    />
+                            return (
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-muted-foreground">{actionDef.label}</label>
+                                    <div className="flex h-10 items-center">
+                                        {actionDef.type === 'boolean' ? (
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-input"
+                                                checked={!!(formData as any)[actionDef.key]}
+                                                onChange={(e) => setFormData({ ...formData, [actionDef.key]: e.target.checked })}
+                                            />
+                                        ) : (
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                                value={(formData as any)[actionDef.key] || 0}
+                                                onChange={(e) => setFormData({ ...formData, [actionDef.key]: parseInt(e.target.value) || 0 })}
+                                            />
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-muted-foreground">Nombre de Produits</label>
-                            <input
-                                type="number"
-                                min="0"
-                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                value={formData.nombre_produits}
-                                onChange={(e) => setFormData({ ...formData, nombre_produits: parseInt(e.target.value) || 0 })}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-muted-foreground">Nombre de Commandes</label>
-                            <input
-                                type="number"
-                                min="0"
-                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                value={formData.nombre_commandes}
-                                onChange={(e) => setFormData({ ...formData, nombre_commandes: parseInt(e.target.value) || 0 })}
-                            />
-                        </div>
+                            );
+                        })()}
                     </div>
 
                     <div className="mt-8 flex justify-end space-x-3">
