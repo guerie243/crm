@@ -15,8 +15,7 @@ interface ProspectTableProps {
     onEdit: (prospect: Prospect) => void;
     onDelete: (id: string) => void;
     onUpdateStep: (id: string, step: ProspectStep) => void;
-    onToggleBool: (id: string, field: keyof Prospect, value: boolean) => void;
-    onUpdateNumber: (id: string, field: keyof Prospect, value: number) => void;
+    onUpdateFields: (id: string, updates: Partial<Prospect>) => void;
 }
 
 export function ProspectTable({
@@ -24,8 +23,7 @@ export function ProspectTable({
     onEdit,
     onDelete,
     onUpdateStep,
-    onToggleBool,
-    onUpdateNumber
+    onUpdateFields
 }: ProspectTableProps) {
     return (
         <div className="w-full overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
@@ -58,35 +56,77 @@ export function ProspectTable({
                                     </select>
                                 </td>
                                 <td className="px-4 py-4">
-                                    <div className="flex items-center space-x-4">
+                                    <div className="flex items-center space-x-6">
                                         {(() => {
                                             const actionDef = STEP_ACTION_MAPPING[p.etape];
                                             if (!actionDef) return null;
 
-                                            if (actionDef.type === 'boolean') {
-                                                return (
-                                                    <Tooltip label={actionDef.label}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={!!p[actionDef.key]}
-                                                            onChange={(e) => onToggleBool(p.id, actionDef.key as keyof ProspectInsert, e.target.checked)}
-                                                            className="h-4 w-4 rounded border-input"
-                                                        />
-                                                    </Tooltip>
-                                                );
-                                            } else {
-                                                return (
-                                                    <div className="flex items-center space-x-2">
-                                                        <span className="text-xs text-muted-foreground">{actionDef.label}:</span>
-                                                        <input
-                                                            type="number"
-                                                            value={(p[actionDef.key] as number) || 0}
-                                                            onChange={(e) => onUpdateNumber(p.id, actionDef.key as keyof ProspectInsert, parseInt(e.target.value) || 0)}
-                                                            className="w-16 bg-transparent border-b border-input focus:border-primary focus:ring-0 text-primary px-1 py-0.5"
-                                                        />
+                                            const handleTriggerChange = (isChecked: boolean) => {
+                                                const updates: Partial<Prospect> = { [actionDef.triggerKey]: isChecked };
+                                                if (isChecked && !p.timer_started_at) {
+                                                    updates.timer_started_at = new Date().toISOString();
+                                                } else if (!isChecked) {
+                                                    updates.timer_started_at = null;
+                                                }
+                                                onUpdateFields(p.id, updates);
+                                            };
+
+                                            const handleGoalNumberChange = (valStr: string) => {
+                                                const val = parseInt(valStr) || 0;
+                                                onUpdateFields(p.id, { [actionDef.goalKey]: val });
+                                            };
+
+                                            return (
+                                                <>
+                                                    {/* Trigger Action */}
+                                                    <div className="flex items-center space-x-2 border-r border-border pr-4">
+                                                        <span className="text-[10px] uppercase text-muted-foreground font-semibold">Déclencheur</span>
+                                                        {actionDef.triggerType === 'boolean' ? (
+                                                            <Tooltip label={actionDef.triggerLabel}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={!!p[actionDef.triggerKey]}
+                                                                    onChange={(e) => handleTriggerChange(e.target.checked)}
+                                                                    className="h-4 w-4 rounded border-input"
+                                                                />
+                                                            </Tooltip>
+                                                        ) : (
+                                                            <div className="flex items-center space-x-1">
+                                                                <Tooltip label={actionDef.triggerLabel}>
+                                                                    <span className="text-xs">{actionDef.triggerLabel}:</span>
+                                                                </Tooltip>
+                                                                <span className="text-primary font-medium">{String(p[actionDef.triggerKey] || 0)}</span>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                );
-                                            }
+
+                                                    {/* Goal Action */}
+                                                    <div className="flex items-center space-x-2 pl-2">
+                                                        <span className="text-[10px] uppercase text-muted-foreground font-semibold">Cible</span>
+                                                        {actionDef.goalType === 'boolean' ? (
+                                                            <Tooltip label={actionDef.goalLabel}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={!!p[actionDef.goalKey]}
+                                                                    onChange={(e) => onUpdateFields(p.id, { [actionDef.goalKey]: e.target.checked })}
+                                                                    className="h-4 w-4 rounded border-input"
+                                                                />
+                                                            </Tooltip>
+                                                        ) : (
+                                                            <div className="flex items-center space-x-1">
+                                                                <Tooltip label={actionDef.goalLabel}>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={(p[actionDef.goalKey] as number) || 0}
+                                                                        onChange={(e) => handleGoalNumberChange(e.target.value)}
+                                                                        className="w-16 bg-transparent border-b border-input focus:border-primary focus:ring-0 text-primary px-1 py-0.5 text-xs inline-block"
+                                                                    />
+                                                                </Tooltip>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            );
                                         })()}
                                     </div>
                                 </td>
@@ -105,7 +145,8 @@ export function ProspectTable({
                                         "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium border",
                                         recommendation.status === 'SUCCESS' ? "bg-status-success/10 text-status-success border-status-success/20" :
                                             recommendation.status === 'ALERT' ? "bg-status-alert/10 text-status-alert border-status-alert/20" :
-                                                "bg-status-waiting/10 text-status-waiting border-status-waiting/20"
+                                                recommendation.status === 'IN_PROGRESS' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                                                    "bg-status-waiting/10 text-status-waiting border-status-waiting/20"
                                     )}>
                                         {recommendation.text}
                                     </span>

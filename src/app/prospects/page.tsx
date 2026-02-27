@@ -172,8 +172,7 @@ export default function ProspectsPage() {
                 onEdit={(p) => { setSelectedProspect(p); setIsModalOpen(true); }}
                 onDelete={handleDelete}
                 onUpdateStep={(id, step) => handleInlineUpdate(id, { etape: step })}
-                onToggleBool={(id, field, value) => handleInlineUpdate(id, { [field]: value })}
-                onUpdateNumber={(id, field, value) => handleInlineUpdate(id, { [field]: value })}
+                onUpdateFields={(id, updates) => handleInlineUpdate(id, updates)}
             />
 
             <ProspectModal

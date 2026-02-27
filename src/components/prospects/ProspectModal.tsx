@@ -24,6 +24,7 @@ export function ProspectModal({ isOpen, onClose, onSave, prospect }: ProspectMod
         nombre_produits: 0,
         lien_partage: false,
         nombre_commandes: 0,
+        timer_started_at: null,
     });
 
     const [loading, setLoading] = useState(false);
@@ -41,6 +42,7 @@ export function ProspectModal({ isOpen, onClose, onSave, prospect }: ProspectMod
                 nombre_produits: prospect.nombre_produits,
                 lien_partage: prospect.lien_partage,
                 nombre_commandes: prospect.nombre_commandes,
+                timer_started_at: prospect.timer_started_at,
             });
         } else {
             setFormData({
@@ -54,6 +56,7 @@ export function ProspectModal({ isOpen, onClose, onSave, prospect }: ProspectMod
                 nombre_produits: 0,
                 lien_partage: false,
                 nombre_commandes: 0,
+                timer_started_at: null,
             });
         }
     }, [prospect, isOpen]);
@@ -119,28 +122,63 @@ export function ProspectModal({ isOpen, onClose, onSave, prospect }: ProspectMod
                             const actionDef = STEP_ACTION_MAPPING[formData.etape];
                             if (!actionDef) return null;
 
+                            const handleTriggerChange = (isChecked: boolean) => {
+                                const newFormData = { ...formData, [actionDef.triggerKey]: isChecked };
+                                if (isChecked && !formData.timer_started_at) {
+                                    newFormData.timer_started_at = new Date().toISOString();
+                                } else if (!isChecked) {
+                                    newFormData.timer_started_at = null;
+                                }
+                                setFormData(newFormData);
+                            };
+
                             return (
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-muted-foreground">{actionDef.label}</label>
-                                    <div className="flex h-10 items-center">
-                                        {actionDef.type === 'boolean' ? (
-                                            <input
-                                                type="checkbox"
-                                                className="h-4 w-4 rounded border-input"
-                                                checked={!!(formData as any)[actionDef.key]}
-                                                onChange={(e) => setFormData({ ...formData, [actionDef.key]: e.target.checked })}
-                                            />
-                                        ) : (
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                                value={(formData as any)[actionDef.key] || 0}
-                                                onChange={(e) => setFormData({ ...formData, [actionDef.key]: parseInt(e.target.value) || 0 })}
-                                            />
-                                        )}
+                                <>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-muted-foreground">{actionDef.triggerLabel} (Déclencheur)</label>
+                                        <div className="flex h-10 items-center">
+                                            {actionDef.triggerType === 'boolean' ? (
+                                                <input
+                                                    type="checkbox"
+                                                    className="h-4 w-4 rounded border-input"
+                                                    checked={!!(formData as any)[actionDef.triggerKey]}
+                                                    onChange={(e) => handleTriggerChange(e.target.checked)}
+                                                />
+                                            ) : (
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                                    value={(formData as any)[actionDef.triggerKey] || 0}
+                                                    onChange={(e) => handleTriggerChange((parseInt(e.target.value) || 0) > 0)}
+                                                    disabled
+                                                />
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-muted-foreground">{actionDef.goalLabel} (Cible)</label>
+                                        <div className="flex h-10 items-center">
+                                            {actionDef.goalType === 'boolean' ? (
+                                                <input
+                                                    type="checkbox"
+                                                    className="h-4 w-4 rounded border-input"
+                                                    checked={!!(formData as any)[actionDef.goalKey]}
+                                                    onChange={(e) => setFormData({ ...formData, [actionDef.goalKey]: e.target.checked })}
+                                                />
+                                            ) : (
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                                    value={(formData as any)[actionDef.goalKey] || 0}
+                                                    onChange={(e) => setFormData({ ...formData, [actionDef.goalKey]: parseInt(e.target.value) || 0 })}
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
                             );
                         })()}
                     </div>

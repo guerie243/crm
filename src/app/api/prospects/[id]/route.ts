@@ -13,8 +13,17 @@ export async function PUT(
         const { id } = await params;
         const body: ProspectUpdate = await request.json();
 
-        // Server-side score calculation
-        const score = calculateScore(body);
+        // On récupère l'ancier prospect pour fusionner et calculer un score exact
+        const { data: oldProspect, error: fetchError } = await supabase
+            .from('prospects')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        const mergedBody = { ...oldProspect, ...body };
+        const score = calculateScore(mergedBody);
 
         const { data, error } = await supabase
             .from('prospects')

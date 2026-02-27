@@ -20,6 +20,7 @@ export interface Prospect {
     lien_partage: boolean;
     nombre_commandes: number;
     score: number;
+    timer_started_at: string | null;
     created_at: string;
     updated_at: string | null;
 }
